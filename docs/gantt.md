@@ -16,4 +16,5 @@ gantt
     section Generación de Salidas
     Reportes :active, 8, 2025-09-18, 2025-09-20
     section Pruebas, Corrección y Documentación
+    Documentación :active, 9, 2025-09-18, 2025-09-21
 ```
