@@ -10,6 +10,7 @@ gantt
     Diagrama de Flujo :active, 4, 2025-09-18, 2025-09-18
     Diseño Autómata :active, 3, 2025-09-18, 2025-09-18
     section Implementación del Analizador Léxico
+    Graphviz :active, 7, 2025-09-18, 2025-09-19
     Interfaz Web :active, 6, 2025-09-18, 2025-09-19
     Implementación Analizador Léxico :active, 5, 2025-09-18, 2025-09-19
     section Generación de Salidas
