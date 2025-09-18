@@ -1,0 +1,33 @@
+name: Generar Diagrama Gantt con Mermaid
+
+permissions:
+  contents: write
+  issues: read
+
+on:
+  issues:
+    types: [opened, closed, edited, deleted]
+  workflow_dispatch:
+
+jobs:
+  generar-gantt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Generar diagrama Gantt Mermaid
+        run: python scripts/generar_gantt.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Hacer commit y push del diagrama
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: "docs/gantt.md"
+          author_name: "github-actions[bot]"
+          author_email: "github-actions[bot]@users.noreply.github.com"
+          message: "Actualiza diagrama de Gantt automático"
