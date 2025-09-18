@@ -7,6 +7,7 @@ gantt
     Análisis :active, 2, 2025-09-18, 2025-09-18
     Lectura Archivo :active, 1, 2025-09-18, 2025-09-18
     section Diseño del AFD y Diagrama del Sistema
+    Diseño Autómata :active, 3, 2025-09-18, 2025-09-18
     section Implementación del Analizador Léxico
     section Generación de Salidas
     section Pruebas, Corrección y Documentación
