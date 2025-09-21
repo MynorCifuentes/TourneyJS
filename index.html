@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css">
     <link rel="stylesheet" href="./Interfaz/styles.css">
+    <!-- Nuevo: estilos para tablas con look & feel de CodeMirror -->
+    <link rel="stylesheet" href="./Interfaz/codemirror-tables.css">
 </head>
 <body>
     <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="cargarArchivo(event)">
@@ -42,7 +44,7 @@
                         <div class="results-content" id="resultsContent">
                             <div class="empty-state">
                                 <div class="empty-icon">📊</div>
-                                <p>Escribe tu configuración JSON en el editor para ver los resultados aquí</p>
+                                <p>Escribe la configuración del torneo y haz clic en “Analizar Torneo” para ver los resultados aquí</p>
                             </div>
                         </div>
                     </div>
@@ -57,6 +59,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/lint/lint.min.js"></script>
+
+    <!-- Viz.js para renderizar DOT a SVG -->
+    <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/full.render.js"></script>
+
     <script src="./Lenguaje/Scanner.js"></script>
     <script src="./Lenguaje/index.js"></script>
 </body>

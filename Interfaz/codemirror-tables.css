@@ -1,0 +1,124 @@
+/* Estiliza secciones y tablas para que combinen con el tema CodeMirror "material" */
+
+:root {
+  --cm-bg: #263238;            /* fondo material */
+  --cm-panel-bg: #1e272e;      /* panel/targeta */
+  --cm-text: #eceff1;
+  --cm-muted: #b0bec5;
+  --cm-border: #37474f;
+  --cm-accent: #82b1ff;
+  --cm-accent-weak: #546e7a;
+  --cm-row-alt: #2a343a;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --cm-bg: #fafafa;
+    --cm-panel-bg: #ffffff;
+    --cm-text: #222;
+    --cm-muted: #666;
+    --cm-border: #ddd;
+    --cm-accent: #2962ff;
+    --cm-accent-weak: #e3f2fd;
+    --cm-row-alt: #f7f7f7;
+  }
+}
+
+.results-panel {
+  background: var(--cm-panel-bg);
+  color: var(--cm-text);
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.results-header {
+  background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(130,177,255,0.06) 100%);
+  border-bottom: 1px solid var(--cm-border);
+  color: var(--cm-text);
+}
+
+.result-section.cm-card {
+  background: transparent;
+  border-top: 1px solid var(--cm-border);
+  padding: 16px 16px 8px 16px;
+}
+
+.result-section.cm-card:first-child {
+  border-top: none;
+}
+
+.result-section.cm-card h3 {
+  margin: 0 0 10px 0;
+  color: var(--cm-accent);
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+
+/* Tablas */
+.cm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--cm-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.cm-table thead th {
+  text-align: left;
+  background: var(--cm-accent-weak);
+  color: var(--cm-text);
+  border-bottom: 1px solid var(--cm-border);
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.cm-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cm-border);
+  color: var(--cm-text);
+  vertical-align: top;
+}
+
+.cm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cm-table.cm-striped tbody tr:nth-child(2n) {
+  background: var(--cm-row-alt);
+}
+
+.cm-table.cm-hover tbody tr:hover {
+  background: rgba(130,177,255,0.08);
+}
+
+.cm-table .num {
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: .3px;
+}
+
+/* Badges y chips */
+.cm-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--cm-accent-weak);
+  color: var(--cm-text);
+  font-size: 12px;
+  border: 1px solid var(--cm-border);
+}
+
+/* Contenedores del SVG */
+#bracket-svg {
+  background: var(--cm-panel-bg);
+  border: 1px solid var(--cm-border);
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
