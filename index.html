@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TourneyJS - Analizador de Torneos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css">
+    <link rel="stylesheet" href="./Interfaz/styles.css">
+</head>
+<body>
+    <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="cargarArchivo(event)">
+    <div class="container">
+        <header class="header">
+            <h1>TourneyJS - Analizador de Torneos</h1>
+        </header>
+
+        <nav class="nav-buttons">
+            <button class="nav-btn" onclick="document.getElementById('fileInput').click()">Cargar Archivo</button>
+            <button class="nav-btn" onclick="analizarTorneo()">Analizar Torneo</button>
+            <button class="nav-btn" onclick="generarReporte()">Generar Reporte</button>
+            <button class="nav-btn" onclick="mostrarBracket()">Mostrar Bracket</button>
+        </nav>
+
+        <main class="main-content">
+            <div class="content-section">
+                <div class="editor-container">
+                    <div class="editor-panel">
+                        <div class="editor-header">
+                            Editor de Código - Configuración del Torneo
+                        </div>
+                        <div class="editor-wrapper">
+                            <textarea id="codeEditor"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="results-panel">
+                        <div class="results-header">
+                            Resultados del Análisis
+                        </div>
+                        <div class="results-content" id="resultsContent">
+                            <div class="empty-state">
+                                <div class="empty-icon">📊</div>
+                                <p>Escribe tu configuración JSON en el editor para ver los resultados aquí</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- CodeMirror JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/lint/lint.min.js"></script>
+    <script src="./Lenguaje/Scanner.js"></script>
+    <script src="./Lenguaje/index.js"></script>
+</body>
+</html>
