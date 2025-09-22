@@ -8,7 +8,7 @@ gantt
     Lectura Archivo :done, 1, 2025-09-18, 2025-09-18
     section Diseño del AFD y Diagrama del Sistema
     Diagrama de Flujo :active, 4, 2025-09-18, 2025-09-18
-    Diseño Autómata :active, 3, 2025-09-18, 2025-09-18
+    Diseño Autómata :done, 3, 2025-09-18, 2025-09-18
     section Implementación del Analizador Léxico
     Graphviz :active, 7, 2025-09-18, 2025-09-19
     Interfaz Web :done, 6, 2025-09-18, 2025-09-19
