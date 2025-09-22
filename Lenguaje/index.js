@@ -1,100 +1,173 @@
-let editor;
+// Lógica de interfaz, análisis léxico y generación de reportes/brackets (ES6, nombres en español)
 
-// Utilidades
-const $ = (sel) => document.querySelector(sel);
-function escapeHTML(str = "") {
-    return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-function sectionHTML(title, inner) {
-    return `
-        <div class="result-section cm-card">
-            <h3>${escapeHTML(title)}</h3>
-            ${inner}
-        </div>
-    `;
-}
-function renderTokensTable(tokens) {
-    const rows = tokens.map((t, i) => `
-        <tr>
-            <td class="num">${i + 1}</td>
-            <td>${escapeHTML(t.type || "")}</td>
-            <td>${escapeHTML(t.lexeme != null ? String(t.lexeme) : "")}</td>
-            <td class="num">${t.line ?? ""}</td>
-            <td class="num">${t.column ?? ""}</td>
-        </tr>
-    `).join("");
-    return `
-        <table class="cm-table cm-striped cm-hover">
-            <thead><tr><th>#</th><th>Token</th><th>Lexema</th><th>Línea</th><th>Columna</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-    `;
-}
-function renderErrorsTable(errors) {
-    if (!errors || !errors.length) return `<span class="cm-badge">Sin errores léxicos</span>`;
-    const rows = errors.map((e, i) => `
-        <tr>
-            <td class="num">${i + 1}</td>
-            <td>${escapeHTML(e.message || "")}</td>
-            <td class="num">${e.line ?? ""}</td>
-            <td class="num">${e.column ?? ""}</td>
-        </tr>
-    `).join("");
-    return `
-        <table class="cm-table cm-striped cm-hover">
-            <thead><tr><th>#</th><th>Descripción</th><th>Línea</th><th>Columna</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-    `;
-}
+let editorCodigo = null;
 
-// Estado del último análisis (solo léxico)
-let LAST_TOKENS = [];
-let LAST_ERRORS = [];
-let LAST_MATCHES = [];     // { local, visita, gl, gv }
-let LAST_EQUIPOS = new Set();
-let LAST_GOLEADORES = new Map();
+// ============================
+// Utilidades de DOM y render
+// ============================
 
-// Inicializar CodeMirror
-document.addEventListener("DOMContentLoaded", function () {
-    editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
-        mode: "application/json",
-        theme: "material",
-        styleActiveLine: true,
-        lineNumbers: true,
-        lineWrapping: false,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        indentUnit: 4,
-        tabSize: 4,
-        scrollbarStyle: "native",
-        value: `TORNEO {
-  nombre: "Mega Copa Universitaria",
+/** Selecciona un elemento del DOM */
+const $ = (selectorCSS) => document.querySelector(selectorCSS);
+
+/** Escapa caracteres peligrosos para insertar texto en HTML con seguridad */
+const escaparHTML = (texto = "") =>
+  String(texto)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+/** Crea una sección (tarjeta) bonita en el panel derecho */
+const crearSeccionHTML = (titulo, contenidoHTML) => `
+  <div class="result-section cm-card">
+    <h3>${escaparHTML(titulo)}</h3>
+    ${contenidoHTML}
+  </div>
+`;
+
+/** Renderiza tabla de tokens */
+const renderizarTablaTokens = (tokens) => {
+  const filas = tokens
+    .map(
+      (t, i) => `
+      <tr>
+        <td class="num">${i + 1}</td>
+        <td>${escaparHTML(t.type || "")}</td>
+        <td>${escaparHTML(t.lexeme != null ? String(t.lexeme) : "")}</td>
+        <td class="num">${t.line ?? ""}</td>
+        <td class="num">${t.column ?? ""}</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  return `
+    <table class="cm-table cm-striped cm-hover">
+      <thead>
+        <tr><th>#</th><th>Token</th><th>Lexema</th><th>Línea</th><th>Columna</th></tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `;
+};
+
+/** Renderiza tabla de errores léxicos */
+const renderizarTablaErrores = (errores) => {
+  if (!errores || errores.length === 0) {
+    return `<span class="cm-badge">Sin errores léxicos</span>`;
+  }
+  const filas = errores
+    .map(
+      (e, i) => `
+      <tr>
+        <td class="num">${i + 1}</td>
+        <td>${escaparHTML(e.mensaje || e.message || "")}</td>
+        <td class="num">${e.linea ?? e.line ?? ""}</td>
+        <td class="num">${e.columna ?? e.column ?? ""}</td>
+      </tr>
+    `
+    )
+    .join("");
+  return `
+    <table class="cm-table cm-striped cm-hover">
+      <thead><tr><th>#</th><th>Descripción</th><th>Línea</th><th>Columna</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `;
+};
+
+/** Renderiza tabla de estadísticas por equipo */
+const renderizarTablaEstadisticasEquipos = (filasDatos) => {
+  const filas = filasDatos
+    .map(
+      (r, i) =>
+        `<tr>
+          <td class="num">${i + 1}</td>
+          <td>${escaparHTML(r.equipo)}</td>
+          <td class="num">${r.J}</td>
+          <td class="num">${r.G}</td>
+          <td class="num">${r.P}</td>
+          <td class="num">${r.GF}</td>
+          <td class="num">${r.GC}</td>
+        </tr>`
+    )
+    .join("");
+
+  return `
+    <table class="cm-table cm-striped cm-hover">
+      <thead><tr><th>#</th><th>Equipo</th><th>J</th><th>G</th><th>P</th><th>GF</th><th>GC</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `;
+};
+
+/** Renderiza tabla de goleadores */
+const renderizarTablaGoleadores = (goleadores) => {
+  const ordenados = goleadores.slice().sort((a, b) => b.goles - a.goles);
+  const filas = ordenados
+    .map(
+      (g, i) =>
+        `<tr><td class="num">${i + 1}</td><td>${escaparHTML(g.jugador)}</td><td class="num">${g.goles}</td></tr>`
+    )
+    .join("");
+
+  return `
+    <table class="cm-table cm-striped cm-hover">
+      <thead><tr><th>#</th><th>Jugador</th><th>Goles</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  `;
+};
+
+// ============================
+// Estado del análisis actual
+// ============================
+
+let ULTIMOS_TOKENS = [];
+let ULTIMOS_ERRORES = [];
+let PARTIDOS_DETECTADOS = []; // { local, visita, gl, gv }
+let EQUIPOS_DETECTADOS = new Set();
+let MAPA_GOLEADORES = new Map();
+
+// ============================
+// Inicialización de CodeMirror
+// ============================
+
+document.addEventListener("DOMContentLoaded", () => {
+  editorCodigo = CodeMirror.fromTextArea($("#codeEditor"), {
+    mode: "application/json",
+    theme: "material",
+    styleActiveLine: true,
+    lineNumbers: true,
+    lineWrapping: false,
+    autoCloseBrackets: true,
+    matchBrackets: true,
+    indentUnit: 4,
+    tabSize: 4,
+    scrollbarStyle: "native",
+    value: `TORNEO {
+  nombre: "Copa Mundial Universitaria",
   equipos: 4,
-  sede: "El Salvador"
+  sede: "Guatemala"
 }
 
 EQUIPOS {
-  equipo: "Leones Dorados" [
+  equipo: "Leones FC" [
     jugador: "Daniel Pérez" [posicion: "DELANTERO", numero: 9, edad: 23],
     jugador: "Roberto López" [posicion: "MEDIOCAMPO", numero: 8, edad: 22],
     jugador: "Santiago Ramírez" [posicion: "DEFENSA", numero: 4, edad: 25],
     jugador: "Manuel Torres" [posicion: "PORTERO", numero: 1, edad: 29]
   ],
-  equipo: "Tiburones Azules" [
+  equipo: "Cóndores FC" [
     jugador: "Cristian Morales" [posicion: "DELANTERO", numero: 11, edad: 26],
     jugador: "Alejandro Ruiz" [posicion: "DEFENSA", numero: 3, edad: 28]
   ],
-  equipo: "Águilas Negras" [
+  equipo: "Águilas United" [
     jugador: "Javier Gómez" [posicion: "DELANTERO", numero: 7, edad: 24],
     jugador: "Felipe Díaz" [posicion: "PORTERO", numero: 12, edad: 27]
   ],
-  equipo: "Pumas Blancos" [
+  equipo: "Tigres Academy" [
     jugador: "Oscar Hernández" [posicion: "DELANTERO", numero: 10, edad: 20],
     jugador: "Luis Ramírez" [posicion: "MEDIOCAMPO", numero: 6, edad: 22]
   ]
@@ -102,418 +175,401 @@ EQUIPOS {
 
 ELIMINACION {
   cuartos: [
-    partido: "Leones Dorados" vs "Tiburones Azules" [
-      resultado: "2-2",
-      goleadores: [
-        goleador: "Cristian Morales" [minuto: 12],
-        goleador: "Daniel Pérez" [minuto: 30],
-        goleador: "Alejandro Ruiz" [minuto: 60],
-        goleador: "Roberto López" [minuto: 78]
-      ]
-    ],
-    partido: "Águilas Negras" vs "Pumas Blancos" [
-      resultado: "3-1",
-      goleadores: [
-        goleador: "Javier Gómez" [minuto: 15],
-        goleador: "Oscar Hernández" [minuto: 43],
-        goleador: "Felipe Díaz" [minuto: 55],
-        goleador: "Javier Gómez" [minuto: 88]
-      ]
-    ]
+    partido: "Leones FC" vs "Cóndores FC" [resultado: "3-1"],
+    partido: "Águilas United" vs "Tigres Academy" [resultado: "2-0"]
   ],
   semifinal: [
-    partido: "Leones Dorados" vs "Águilas Negras" [resultado: "Pendiente"]
+    partido: "Leones FC" vs "Águilas United" [resultado: "1-0"]
+  ],
+  final: [
+    partido: "Leones FC" vs "TBD" [resultado: "Pendiente"]
   ]
 }`
-    });
+  });
 
-    setTimeout(() => {
-        editor.refresh();
-    }, 100);
+  setTimeout(() => editorCodigo.refresh(), 100);
 });
 
-function cargarArchivo(event) {
-    const files = event.target.files;
-    if (files.length > 0) {
-        const file = files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) { editor.setValue(e.target.result); };
-        reader.onerror = function() { alert("Error al leer el archivo"); };
-        reader.readAsText(file);
-    }
+// ============================
+// Entrada de archivos
+// ============================
+
+/** Lee un archivo de texto y coloca su contenido en el editor */
+function cargarArchivoDesdeDispositivo(eventoCambio) {
+  const archivos = eventoCambio.target.files;
+  if (!archivos || archivos.length === 0) return;
+
+  const archivo = archivos[0];
+  const lector = new FileReader();
+
+  lector.onload = (e) => {
+    editorCodigo.setValue(e.target.result);
+  };
+  lector.onerror = () => alert("Error al leer el archivo.");
+  lector.readAsText(archivo);
 }
 
-// Escaneo completo hasta EOF
-function scanAll() {
-    const scanner = new Scanner(editor.getValue());
-    const tokens = [];
-    let token = scanner.next_token();
-    while (token && token.type !== 'EOF') {
-        tokens.push(token);
-        token = scanner.next_token();
-    }
-    const errors = typeof scanner.getErrors === 'function' ? scanner.getErrors() : [];
-    LAST_TOKENS = tokens;
-    LAST_ERRORS = errors;
-    return { tokens, errors };
-}
+// ============================
+// Escaneo léxico (sin parser)
+// ============================
 
-// Patrones por tokens (sin parser)
-function analyzeDomainFromTokens(tokens) {
-    LAST_MATCHES = [];
-    LAST_EQUIPOS = new Set();
-    LAST_GOLEADORES = new Map();
+/** Escanea todo el contenido del editor y actualiza el estado global de tokens/errores */
+const escanearTodo = () => {
+  const escaner = new Scanner(editorCodigo.getValue());
+  const tokens = [];
 
-    let i = 0;
-    let currentMatch = null;
+  while (true) {
+    const token = escaner.obtenerSiguienteToken();
+    if (!token || token.type === "EOF") break;
+    tokens.push(token);
+  }
 
-    const at = (k) => tokens[i + k];
-    const isLex = (k, type, lexeme) => {
-        const t = at(k);
-        if (!t) return false;
-        if (type && t.type !== type) return false;
-        if (lexeme !== undefined && t.lexeme !== lexeme) return false;
-        return true;
-    };
+  const errores = typeof escaner.obtenerErroresLexicos === "function"
+    ? escaner.obtenerErroresLexicos()
+    : (typeof escaner.getErrors === "function" ? escaner.getErrors() : []);
 
-    while (i < tokens.length) {
-        // equipo : "Nombre"
-        if (isLex(0, 'KW_equipo') && isLex(1, 'TK_colon') && isLex(2, 'TK_string')) {
-            LAST_EQUIPOS.add(at(2).lexeme);
-            i += 3;
-            continue;
-        }
+  ULTIMOS_TOKENS = tokens;
+  ULTIMOS_ERRORES = errores;
 
-        // partido : "Equipo A" vs "Equipo B"
-        if (isLex(0, 'TK_id', 'partido') && isLex(1, 'TK_colon') && isLex(2, 'TK_string') && isLex(3, 'TK_id', 'vs') && isLex(4, 'TK_string')) {
-            currentMatch = { local: at(2).lexeme, visita: at(4).lexeme, gl: null, gv: null };
-            LAST_MATCHES.push(currentMatch);
-            i += 5;
-            continue;
-        }
-
-        // resultado : "x-y" (para el último partido visto)
-        if (isLex(0, 'TK_id', 'resultado') && isLex(1, 'TK_colon') && isLex(2, 'TK_string')) {
-            const res = (at(2).lexeme || "").trim();
-            const m = res.match(/^(\d+)\s*-\s*(\d+)$/);
-            if (m && currentMatch) {
-                currentMatch.gl = parseInt(m[1], 10);
-                currentMatch.gv = parseInt(m[2], 10);
-            }
-            i += 3;
-            continue;
-        }
-
-        // goleador : "Nombre"
-        if (isLex(0, 'TK_id', 'goleador') && isLex(1, 'TK_colon') && isLex(2, 'TK_string')) {
-            const name = at(2).lexeme;
-            LAST_GOLEADORES.set(name, (LAST_GOLEADORES.get(name) || 0) + 1);
-            i += 3;
-            continue;
-        }
-
-        i++;
-    }
-
-    return {
-        equipos: Array.from(LAST_EQUIPOS),
-        matches: LAST_MATCHES.slice(),
-        goleadores: Array.from(LAST_GOLEADORES.entries()).map(([jugador, goles]) => ({ jugador, goles }))
-    };
-}
-
-// Detectar rondas y partidos por ronda
-function analyzeRoundsFromTokens(tokens) {
-    const rounds = []; // [{name, matches:[{local, visita, gl, gv}]}]
-    let i = 0;
-
-    const at = (k) => tokens[i + k];
-    const is = (k, type, lexeme) => {
-        const t = at(k);
-        if (!t) return false;
-        if (type && t.type !== type) return false;
-        if (lexeme !== undefined && t.lexeme !== lexeme) return false;
-        return true;
-    };
-
-    while (i < tokens.length) {
-        // Una ronda: <id> : [
-        if (is(0, 'TK_id') && is(1, 'TK_colon') && is(2, 'TK_lbrk')) {
-            const roundName = at(0).lexeme;
-            i += 3;
-            let depth = 1;
-            const round = { name: roundName, matches: [] };
-            let currentMatch = null;
-
-            while (i < tokens.length && depth > 0) {
-                if (is(0, 'TK_lbrk')) { depth++; i++; continue; }
-                if (is(0, 'TK_rbrk')) { depth--; i++; continue; }
-
-                // partido : "A" vs "B"
-                if (is(0, 'TK_id', 'partido') && is(1, 'TK_colon') && is(2, 'TK_string') && is(3, 'TK_id', 'vs') && is(4, 'TK_string')) {
-                    currentMatch = { local: at(2).lexeme, visita: at(4).lexeme, gl: null, gv: null };
-                    round.matches.push(currentMatch);
-                    i += 5;
-                    continue;
-                }
-
-                // resultado : "x-y"
-                if (is(0, 'TK_id', 'resultado') && is(1, 'TK_colon') && is(2, 'TK_string')) {
-                    const res = (at(2).lexeme || "").trim();
-                    const m = res.match(/^(\d+)\s*-\s*(\d+)$/);
-                    if (m && currentMatch) {
-                        currentMatch.gl = parseInt(m[1], 10);
-                        currentMatch.gv = parseInt(m[2], 10);
-                    }
-                    i += 3;
-                    continue;
-                }
-
-                i++;
-            }
-
-            rounds.push(round);
-            continue;
-        }
-
-        i++;
-    }
-
-    // Orden sugerido de rondas
-    const order = ['octavos', 'cuartos', 'semifinal', 'final'];
-    rounds.sort((a, b) => {
-        const ia = order.indexOf((a.name || '').toLowerCase());
-        const ib = order.indexOf((b.name || '').toLowerCase());
-        if (ia === -1 && ib === -1) return 0;
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
-        return ia - ib;
-    });
-    return rounds;
-}
-
-// Título del torneo desde el bloque TORNEO { nombre: "..." }
-function getTournamentTitleFromTokens(tokens) {
-    let i = 0;
-    let inTorneo = false;
-    let depth = 0;
-
-    const at = (k) => tokens[i + k];
-    const is = (k, type, lexeme) => {
-        const t = at(k);
-        if (!t) return false;
-        if (type && t.type !== type) return false;
-        if (lexeme !== undefined && t.lexeme !== lexeme) return false;
-        return true;
-    };
-
-    while (i < tokens.length) {
-        if (!inTorneo && is(0, 'KW_torneo')) {
-            // Debe venir un bloque {...}
-            i++;
-            while (i < tokens.length && !is(0, 'TK_lbrc')) i++;
-            if (is(0, 'TK_lbrc')) { inTorneo = true; depth = 1; i++; continue; }
-        }
-
-        if (inTorneo) {
-            if (is(0, 'TK_lbrc')) { depth++; i++; continue; }
-            if (is(0, 'TK_rbrc')) { depth--; i++; if (depth === 0) break; continue; }
-            if (is(0, 'TK_id', 'nombre') && is(1, 'TK_colon') && is(2, 'TK_string')) {
-                return at(2).lexeme;
-            }
-        }
-
-        i++;
-    }
-    return "Torneo";
-}
-
-// Helpers de bracket
-const COLORS = {
-    winner: "#b7e1cd",
-    loser: "#f4c7c3",
-    pending: "#fff9c4",
-    cluster: {
-        cuartos: "#d9d9d9",
-        semifinal: "#cfe9f3",
-        final: "#fff59d",
-        default: "#eeeeee",
-    }
+  return { tokens, errores };
 };
-function roundFill(name) {
-    const k = (name || "").toLowerCase();
-    return COLORS.cluster[k] || COLORS.cluster.default;
-}
-function sanitizeId(s) {
-    return String(s || "").replace(/\W/g, "_");
-}
-function winnerSide(m) {
-    if (Number.isInteger(m.gl) && Number.isInteger(m.gv)) {
-        if (m.gl > m.gv) return "L";
-        if (m.gv > m.gl) return "R";
+
+/** Extrae equipos, partidos y goleadores a partir de secuencias de tokens (sin parser) */
+const extraerDominioDesdeTokens = (tokens) => {
+  PARTIDOS_DETECTADOS = [];
+  EQUIPOS_DETECTADOS = new Set();
+  MAPA_GOLEADORES = new Map();
+
+  let i = 0;
+  let partidoActual = null;
+
+  const en = (k) => tokens[i + k];
+  const es = (k, tipo, lexema) => {
+    const t = en(k);
+    if (!t) return false;
+    if (tipo && t.type !== tipo) return false;
+    if (lexema !== undefined && t.lexeme !== lexema) return false;
+    return true;
+  };
+
+  while (i < tokens.length) {
+    // equipo : "Nombre"
+    if (es(0, "KW_equipo") && es(1, "TK_colon") && es(2, "TK_string")) {
+      EQUIPOS_DETECTADOS.add(en(2).lexeme);
+      i += 3;
+      continue;
     }
-    return null; // pendiente o empate
-}
-function teamLabel(name, score) {
-    const scoreLine = Number.isInteger(score) ? `\\n${score}` : "";
-    return `${name.replaceAll('"','\\"')}${scoreLine}`;
-}
 
-// Generar DOT con clusters y estilos similares al ejemplo de imagen
-function buildStyledBracketDOT(rounds, titleText) {
-    const lines = [];
-    lines.push('digraph bracket {');
-    lines.push('  rankdir=TB;');
-    lines.push('  labelloc="t";');
-    lines.push('  fontname="Helvetica";');
-    lines.push('  node [fontname="Helvetica"];');
-    lines.push('  edge [fontname="Helvetica"];');
-    lines.push('');
+    // partido : "A" vs "B"
+    if (es(0, "TK_id", "partido") && es(1, "TK_colon") && es(2, "TK_string") && es(3, "TK_id", "vs") && es(4, "TK_string")) {
+      partidoActual = { local: en(2).lexeme, visita: en(4).lexeme, gl: null, gv: null };
+      PARTIDOS_DETECTADOS.push(partidoActual);
+      i += 5;
+      continue;
+    }
 
-    // Título arriba como óvalo
-    const titleId = 'TITLE';
-    lines.push(`  ${titleId} [shape=ellipse, style=filled, fillcolor="#ffeb3b", label="${(titleText || "Torneo").replaceAll('"','\\"')}"];`);
-    lines.push('  { rank=source; TITLE; }');
-    lines.push('');
+    // resultado : "x-y"
+    if (es(0, "TK_id", "resultado") && es(1, "TK_colon") && es(2, "TK_string")) {
+      const res = (en(2).lexeme || "").trim();
+      const m = res.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m && partidoActual) {
+        partidoActual.gl = parseInt(m[1], 10);
+        partidoActual.gv = parseInt(m[2], 10);
+      }
+      i += 3;
+      continue;
+    }
 
-    // Definición de nodos de equipo por partido y nodos "match" auxiliares
-    const matchNodeId = (rIdx, mIdx) => `M_${rIdx}_${mIdx}`;
-    const teamNodeId = (rIdx, mIdx, side) => `T_${rIdx}_${mIdx}_${side}`; // side: L | R
+    // goleador : "Nombre"
+    if (es(0, "TK_id", "goleador") && es(1, "TK_colon") && es(2, "TK_string")) {
+      const nombre = en(2).lexeme;
+      MAPA_GOLEADORES.set(nombre, (MAPA_GOLEADORES.get(nombre) || 0) + 1);
+      i += 3;
+      continue;
+    }
 
-    // Subgrafos (clusters) por ronda
-    rounds.forEach((r, ridx0) => {
-        const rIdx = ridx0 + 1;
-        const fill = roundFill(r.name);
-        lines.push(`  subgraph cluster_${rIdx} {`);
-        lines.push(`    label="${(r.name || "").charAt(0).toUpperCase() + (r.name || "").slice(1)}";`);
-        lines.push('    style=filled;');
-        lines.push('    color="#333333";');
-        lines.push(`    fillcolor="${fill}";`);
-        lines.push('    fontsize=18;');
-        lines.push('    labelloc="t";');
+    i++;
+  }
 
-        // Nodos de cada partido: dos equipos (cajas) y un nodo de partido (elipse gris)
-        r.matches.forEach((m, mIdx0) => {
-            const mIdx = mIdx0 + 1;
-            const wSide = winnerSide(m);
+  return {
+    equipos: Array.from(EQUIPOS_DETECTADOS),
+    partidos: PARTIDOS_DETECTADOS.slice(),
+    goleadores: Array.from(MAPA_GOLEADORES.entries()).map(([jugador, goles]) => ({ jugador, goles })),
+  };
+};
 
-            const lColor = wSide === "L" ? COLORS.winner : (wSide === "R" ? COLORS.loser : COLORS.pending);
-            const rColor = wSide === "R" ? COLORS.winner : (wSide === "L" ? COLORS.loser : COLORS.pending);
+/** Extrae rondas y sus partidos (cuartos, semifinal, final, etc.) a partir de tokens */
+const extraerRondasDesdeTokens = (tokens) => {
+  const rondas = []; // [{ name, matches: [{local, visita, gl, gv}] }]
+  let i = 0;
 
-            const lLabel = teamLabel(m.local || "TBD", m.gl);
-            const rLabel = teamLabel(m.visita || "TBD", m.gv);
+  const en = (k) => tokens[i + k];
+  const es = (k, tipo, lexema) => {
+    const t = en(k);
+    if (!t) return false;
+    if (tipo && t.type !== tipo) return false;
+    if (lexema !== undefined && t.lexeme !== lexema) return false;
+    return true;
+  };
 
-            lines.push(`    ${teamNodeId(rIdx, mIdx, "L")} [shape=box, style="rounded,filled", fillcolor="${lColor}", label="${lLabel}"];`);
-            lines.push(`    ${teamNodeId(rIdx, mIdx, "R")} [shape=box, style="rounded,filled", fillcolor="${rColor}", label="${rLabel}"];`);
-            lines.push(`    ${matchNodeId(rIdx, mIdx)} [shape=ellipse, style=filled, fillcolor="lightgray", label=""];`);
+  while (i < tokens.length) {
+    // Forma: <id> : [
+    if (es(0, "TK_id") && es(1, "TK_colon") && es(2, "TK_lbrk")) {
+      const nombreRonda = en(0).lexeme;
+      i += 3;
+      let profundidad = 1;
+      const ronda = { name: nombreRonda, matches: [] };
+      let partidoActual = null;
 
-            // Conectar equipos al nodo de partido (estético/estructura)
-            lines.push(`    ${teamNodeId(rIdx, mIdx, "L")} -> ${matchNodeId(rIdx, mIdx)} [color="#666666", arrowsize=0.7];`);
-            lines.push(`    ${teamNodeId(rIdx, mIdx, "R")} -> ${matchNodeId(rIdx, mIdx)} [color="#666666", arrowsize=0.7];`);
-        });
+      while (i < tokens.length && profundidad > 0) {
+        if (es(0, "TK_lbrk")) { profundidad++; i++; continue; }
+        if (es(0, "TK_rbrk")) { profundidad--; i++; continue; }
 
-        lines.push('  }');
-        lines.push('');
+        // partido : "A" vs "B"
+        if (es(0, "TK_id", "partido") && es(1, "TK_colon") && es(2, "TK_string") && es(3, "TK_id", "vs") && es(4, "TK_string")) {
+          partidoActual = { local: en(2).lexeme, visita: en(4).lexeme, gl: null, gv: null };
+          ronda.matches.push(partidoActual);
+          i += 5;
+          continue;
+        }
+
+        // resultado : "x-y"
+        if (es(0, "TK_id", "resultado") && es(1, "TK_colon") && es(2, "TK_string")) {
+          const res = (en(2).lexeme || "").trim();
+          const m = res.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m && partidoActual) {
+            partidoActual.gl = parseInt(m[1], 10);
+            partidoActual.gv = parseInt(m[2], 10);
+          }
+          i += 3;
+          continue;
+        }
+
+        i++;
+      }
+
+      rondas.push(ronda);
+      continue;
+    }
+
+    i++;
+  }
+
+  // Orden sugerido
+  const orden = ["octavos", "cuartos", "semifinal", "final"];
+  rondas.sort((a, b) => {
+    const ia = orden.indexOf((a.name || "").toLowerCase());
+    const ib = orden.indexOf((b.name || "").toLowerCase());
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  return rondas;
+};
+
+/** Obtiene el título del torneo desde el bloque TORNEO { nombre: "..." } */
+const obtenerTituloTorneoDesdeTokens = (tokens) => {
+  let i = 0;
+  let dentroTorneo = false;
+  let profundidad = 0;
+
+  const en = (k) => tokens[i + k];
+  const es = (k, tipo, lexema) => {
+    const t = en(k);
+    if (!t) return false;
+    if (tipo && t.type !== tipo) return false;
+    if (lexema !== undefined && t.lexeme !== lexema) return false;
+    return true;
+  };
+
+  while (i < tokens.length) {
+    if (!dentroTorneo && es(0, "KW_torneo")) {
+      i++;
+      while (i < tokens.length && !es(0, "TK_lbrc")) i++;
+      if (es(0, "TK_lbrc")) { dentroTorneo = true; profundidad = 1; i++; continue; }
+    }
+
+    if (dentroTorneo) {
+      if (es(0, "TK_lbrc")) { profundidad++; i++; continue; }
+      if (es(0, "TK_rbrc")) { profundidad--; i++; if (profundidad === 0) break; continue; }
+      if (es(0, "TK_id", "nombre") && es(1, "TK_colon") && es(2, "TK_string")) {
+        return en(2).lexeme;
+      }
+    }
+
+    i++;
+  }
+  return "Torneo";
+};
+
+// ============================
+// Cálculo de estadísticas
+// ============================
+
+/** Calcula estadísticas por equipo: J, G, P, GF, GC */
+const calcularEstadisticasPorEquipo = (listadoEquipos, listadoPartidos) => {
+  const mapa = new Map(listadoEquipos.map((e) => [e, { equipo: e, J: 0, G: 0, P: 0, GF: 0, GC: 0 }]));
+  for (const p of listadoPartidos) {
+    if (!p) continue;
+    const l = mapa.get(p.local);
+    const v = mapa.get(p.visita);
+    if (!l || !v) continue;
+    if (!Number.isInteger(p.gl) || !Number.isInteger(p.gv)) continue;
+
+    l.J++; v.J++;
+    l.GF += p.gl; l.GC += p.gv;
+    v.GF += p.gv; v.GC += p.gl;
+    if (p.gl > p.gv) { l.G++; v.P++; }
+    else if (p.gl < p.gv) { v.G++; l.P++; }
+  }
+  return Array.from(mapa.values());
+};
+
+// ============================
+// Generación del DOT (bracket)
+// ============================
+
+const COLORES = {
+  ganador: "#b7e1cd",
+  perdedor: "#f4c7c3",
+  pendiente: "#fff9c4",
+  cluster: {
+    cuartos: "#d9d9d9",
+    semifinal: "#cfe9f3",
+    final: "#fff59d",
+    default: "#eeeeee",
+  },
+};
+
+const colorClusterPorRonda = (nombre) => {
+  const k = (nombre || "").toLowerCase();
+  return COLORES.cluster[k] || COLORES.cluster.default;
+};
+
+const ladoGanador = (partido) => {
+  if (Number.isInteger(partido.gl) && Number.isInteger(partido.gv)) {
+    if (partido.gl > partido.gv) return "L";
+    if (partido.gv > partido.gl) return "R";
+  }
+  return null; // pendiente o empate
+};
+
+const etiquetaEquipo = (nombre, goles) => {
+  const suf = Number.isInteger(goles) ? `\\n${goles}` : "";
+  return `${String(nombre || "TBD").replaceAll('"', '\\"')}${suf}`;
+};
+
+const idNodoPartido = (indiceRonda, indicePartido) => `M_${indiceRonda}_${indicePartido}`;
+const idNodoEquipoPartido = (indiceRonda, indicePartido, lado) => `T_${indiceRonda}_${indicePartido}_${lado}`;
+
+/** Construye un DOT con clusters por ronda y colores estilo la imagen compartida */
+const construirDOTBracketEstilizado = (rondas, titulo) => {
+  const lineas = [];
+  lineas.push("digraph bracket {");
+  lineas.push('  rankdir=TB;');
+  lineas.push('  labelloc="t";');
+  lineas.push('  fontname="Helvetica";');
+  lineas.push('  node [fontname="Helvetica"];');
+  lineas.push('  edge [fontname="Helvetica"];');
+  lineas.push("");
+
+  // Título (óvalo)
+  lineas.push(`  TITLE [shape=ellipse, style=filled, fillcolor="#ffeb3b", label="${String(titulo || "Torneo").replaceAll('"','\\"')}"];`);
+  lineas.push("  { rank=source; TITLE; }");
+  lineas.push("");
+
+  // Clusters (rondas)
+  rondas.forEach((ronda, idx0) => {
+    const idxRonda = idx0 + 1;
+    const fill = colorClusterPorRonda(ronda.name);
+    const etiquetaRonda = (ronda.name || "").charAt(0).toUpperCase() + (ronda.name || "").slice(1);
+
+    lineas.push(`  subgraph cluster_${idxRonda} {`);
+    lineas.push(`    label="${etiquetaRonda}";`);
+    lineas.push("    style=filled;");
+    lineas.push('    color="#333333";');
+    lineas.push(`    fillcolor="${fill}";`);
+    lineas.push("    fontsize=18;");
+    lineas.push('    labelloc="t";');
+
+    ronda.matches.forEach((p, j0) => {
+      const idxPartido = j0 + 1;
+      const ganador = ladoGanador(p);
+
+      const colorLocal  = ganador === "L" ? COLORES.ganador : (ganador === "R" ? COLORES.perdedor : COLORES.pendiente);
+      const colorVisita = ganador === "R" ? COLORES.ganador : (ganador === "L" ? COLORES.perdedor : COLORES.pendiente);
+
+      const lblLocal  = etiquetaEquipo(p.local,  p.gl);
+      const lblVisita = etiquetaEquipo(p.visita, p.gv);
+
+      lineas.push(`    ${idNodoEquipoPartido(idxRonda, idxPartido, "L")} [shape=box, style="rounded,filled", fillcolor="${colorLocal}", label="${lblLocal}"];`);
+      lineas.push(`    ${idNodoEquipoPartido(idxRonda, idxPartido, "R")} [shape=box, style="rounded,filled", fillcolor="${colorVisita}", label="${lblVisita}"];`);
+      lineas.push(`    ${idNodoPartido(idxRonda, idxPartido)} [shape=ellipse, style=filled, fillcolor="lightgray", label=""];`);
+
+      // Conectar equipos al nodo "partido"
+      lineas.push(`    ${idNodoEquipoPartido(idxRonda, idxPartido, "L")} -> ${idNodoPartido(idxRonda, idxPartido)} [color="#666666", arrowsize=0.7];`);
+      lineas.push(`    ${idNodoEquipoPartido(idxRonda, idxPartido, "R")} -> ${idNodoPartido(idxRonda, idxPartido)} [color="#666666", arrowsize=0.7];`);
     });
 
-    // Conexiones entre rondas: cada par de partidos alimenta uno en la siguiente
-    for (let i = 1; i < rounds.length; i++) {
-        const prev = rounds[i - 1];
-        const curr = rounds[i];
+    lineas.push("  }");
+    lineas.push("");
+  });
 
-        for (let j = 1; j <= curr.matches.length; j++) {
-            const src1 = (2 * j - 1);
-            const src2 = (2 * j);
-            const prev1 = prev.matches[src1 - 1];
-            const prev2 = prev.matches[src2 - 1];
+  // Conexiones entre rondas (de a pares)
+  for (let i = 1; i < rondas.length; i++) {
+    const anterior = rondas[i - 1];
+    const actual = rondas[i];
 
-            const to = matchNodeId(i + 1, j);
+    for (let j = 1; j <= actual.matches.length; j++) {
+      const fuente1 = 2 * j - 1;
+      const fuente2 = 2 * j;
 
-            // Desde partido anterior 1 -> actual
-            if (prev1) {
-                const w1 = winnerSide(prev1); // "L" | "R" | null
-                const fromId1 = matchNodeId(i, src1);
-                const solid1 = w1 !== null; // hay ganador claro
-                const edgeAttrs1 = solid1
-                    ? 'color="black", penwidth=1.6, label="Ganador", fontsize=12'
-                    : 'color="red", style="dashed", penwidth=1.2';
-                lines.push(`  ${fromId1} -> ${to} [${edgeAttrs1}];`);
-            }
+      const p1 = anterior.matches[fuente1 - 1];
+      const p2 = anterior.matches[fuente2 - 1];
 
-            // Desde partido anterior 2 -> actual
-            if (prev2) {
-                const w2 = winnerSide(prev2);
-                const fromId2 = matchNodeId(i, src2);
-                const solid2 = w2 !== null;
-                const edgeAttrs2 = solid2
-                    ? 'color="black", penwidth=1.6, label="Ganador", fontsize=12'
-                    : 'color="red", style="dashed", penwidth=1.2';
-                lines.push(`  ${fromId2} -> ${to} [${edgeAttrs2}];`);
-            }
-        }
+      const destino = idNodoPartido(i + 1, j);
+
+      if (p1) {
+        const hayGanador = ladoGanador(p1) !== null;
+        const atributos = hayGanador
+          ? 'color="black", penwidth=1.6, label="Ganador", fontsize=12'
+          : 'color="red", style="dashed", penwidth=1.2';
+        lineas.push(`  ${idNodoPartido(i, fuente1)} -> ${destino} [${atributos}];`);
+      }
+
+      if (p2) {
+        const hayGanador = ladoGanador(p2) !== null;
+        const atributos = hayGanador
+          ? 'color="black", penwidth=1.6, label="Ganador", fontsize=12'
+          : 'color="red", style="dashed", penwidth=1.2';
+        lineas.push(`  ${idNodoPartido(i, fuente2)} -> ${destino} [${atributos}];`);
+      }
     }
+  }
 
-    // Unir título con la primera ronda para que quede arriba
-    if (rounds.length > 0) {
-        lines.push(`  ${titleId} -> ${matchNodeId(1, 1)} [style="invis"];`);
-    }
+  // Amarra el título a la primera ronda para que quede arriba
+  if (rondas.length > 0) {
+    lineas.push(`  TITLE -> ${idNodoPartido(1, 1)} [style="invis"];`);
+  }
 
-    lines.push('}');
-    return lines.join('\n');
-}
+  lineas.push("}");
+  return lineas.join("\n");
+};
 
-// Estadísticas por equipo
-function computeTeamStats(equipos, matches) {
-    const map = new Map(equipos.map(e => [e, { equipo: e, J: 0, G: 0, P: 0, GF: 0, GC: 0 }]));
-    for (const p of matches) {
-        if (!p) continue;
-        const l = map.get(p.local);
-        const v = map.get(p.visita);
-        if (!l || !v) continue;
-        if (!Number.isInteger(p.gl) || !Number.isInteger(p.gv)) continue; // partido sin resultado
+// ============================
+// Generación de reporte HTML
+// ============================
 
-        l.J++; v.J++;
-        l.GF += p.gl; l.GC += p.gv;
-        v.GF += p.gv; v.GC += p.gl;
-        if (p.gl > p.gv) { l.G++; v.P++; }
-        else if (p.gl < p.gv) { v.G++; l.P++; }
-    }
-    return Array.from(map.values());
-}
-
-function renderTeamStatsTable(rows) {
-    const body = rows.map((r, i) =>
-        `<tr><td class="num">${i + 1}</td><td>${escapeHTML(r.equipo)}</td><td class="num">${r.J}</td><td class="num">${r.G}</td><td class="num">${r.P}</td><td class="num">${r.GF}</td><td class="num">${r.GC}</td></tr>`
-    ).join("");
-    return `
-        <table class="cm-table cm-striped cm-hover">
-            <thead><tr><th>#</th><th>Equipo</th><th>J</th><th>G</th><th>P</th><th>GF</th><th>GC</th></tr></thead>
-            <tbody>${body}</tbody>
-        </table>
-    `;
-}
-
-function renderGoleadoresTable(rows) {
-    const sorted = rows.slice().sort((a,b) => b.goles - a.goles);
-    const body = sorted.map((r, i) =>
-        `<tr><td class="num">${i + 1}</td><td>${escapeHTML(r.jugador)}</td><td class="num">${r.goles}</td></tr>`
-    ).join("");
-    return `
-        <table class="cm-table cm-striped cm-hover">
-            <thead><tr><th>#</th><th>Jugador</th><th>Goles</th></tr></thead>
-            <tbody>${body}</tbody>
-        </table>
-    `;
-}
-
-// Documento HTML descargable (reporte)
-function buildReportHTMLDoc({ generalInner, equiposInner, goleadoresInner }) {
-    const generatedAt = new Date().toLocaleString();
-    return `<!DOCTYPE html>
+/** Construye un documento HTML completo para descargar como archivo */
+const construirDocumentoReporteHTML = ({ htmlGeneral, htmlEquipos, htmlGoleadores }) => {
+  const generado = new Date().toLocaleString();
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reporte de Torneo</title>
 <style>
   :root { color-scheme: light dark; }
@@ -525,126 +581,130 @@ function buildReportHTMLDoc({ generalInner, equiposInner, goleadoresInner }) {
   th { background: #f7f7f7; text-align: left; }
   @media (prefers-color-scheme: dark) {
     th, td { border-color: #444; }
-    th { background: #222; }
+    th { background: #222; color: #f7f7f7; }
+    body { color: #f7f7f7; background-color: #121212; }
   }
   .meta { color: #666; font-size: 0.9rem; }
 </style>
 </head>
 <body>
   <h1>Reporte de Torneo</h1>
-  <p class="meta">Generado: ${escapeHTML(generatedAt)}</p>
+  <p class="meta">Generado: ${escaparHTML(generado)}</p>
 
   <section>
     <h2>Información General</h2>
-    ${generalInner}
+    ${htmlGeneral}
   </section>
 
   <section>
     <h2>Estadísticas por Equipo</h2>
-    ${equiposInner}
+    ${htmlEquipos}
   </section>
 
   <section>
     <h2>Goleadores</h2>
-    ${goleadoresInner}
+    ${htmlGoleadores}
   </section>
 </body>
 </html>`;
-}
-function downloadHTML(filename, html) {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        URL.revokeObjectURL(url);
-        a.remove();
-    }, 0);
-}
+};
 
-// Botón: Analizar Torneo (solo léxico)
+/** Dispara la descarga de un archivo HTML */
+const descargarArchivoHTML = (nombreArchivo, contenidoHTML) => {
+  const blob = new Blob([contenidoHTML], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
+};
+
+// ============================
+// Acciones de botones (global)
+// ============================
+
+/** Analiza léxicamente y muestra tokens + errores en el panel derecho */
 function analizarTorneo() {
-    const { tokens, errors } = scanAll();
-    const tokensHTML = renderTokensTable(tokens);
-    const errorsHTML = renderErrorsTable(errors);
-    const resultsEl = document.getElementById('resultsContent');
-    resultsEl.innerHTML = sectionHTML("Tokens", tokensHTML) + sectionHTML("Errores Léxicos", errorsHTML);
+  const { tokens, errores } = escanearTodo();
+  const htmlTokens = renderizarTablaTokens(tokens);
+  const htmlErrores = renderizarTablaErrores(errores);
+  $("#resultsContent").innerHTML = crearSeccionHTML("Tokens", htmlTokens) + crearSeccionHTML("Errores Léxicos", htmlErrores);
 }
 
-// Botón: Generar Reporte (derivado solo de tokens) + descarga HTML
+/** Genera reporte HTML en el panel derecho y descarga un archivo HTML completo */
 function generarReporte() {
-    if (!LAST_TOKENS.length) {
-        const { tokens } = scanAll();
-        if (!tokens.length) {
-            document.getElementById('resultsContent').innerHTML = "<p>No hay tokens para generar reportes. Carga o escribe contenido y presiona Analizar Torneo.</p>";
-            return;
-        }
-    }
-    const domain = analyzeDomainFromTokens(LAST_TOKENS);
-    const teamStats = computeTeamStats(domain.equipos, domain.matches);
+  if (ULTIMOS_TOKENS.length === 0) escanearTodo();
 
-    const generalHTML = `
-        <ul>
-            <li><strong>Total de equipos:</strong> ${domain.equipos.length}</li>
-            <li><strong>Total de partidos:</strong> ${domain.matches.length}</li>
-            <li><strong>Partidos con resultado:</strong> ${domain.matches.filter(m => Number.isInteger(m.gl) && Number.isInteger(m.gv)).length}</li>
-            <li><strong>Goleadores distintos:</strong> ${domain.goleadores.length}</li>
-        </ul>
-    `;
-    const equiposHTML = renderTeamStatsTable(teamStats);
-    const golesHTML = renderGoleadoresTable(domain.goleadores);
+  if (ULTIMOS_TOKENS.length === 0) {
+    $("#resultsContent").innerHTML = "<p>No hay tokens para generar reportes. Escribe o carga un archivo y presiona Analizar Torneo.</p>";
+    return;
+  }
 
-    document.getElementById('resultsContent').innerHTML =
-        sectionHTML("Reporte - Información General", generalHTML) +
-        sectionHTML("Reporte - Estadísticas por Equipo", equiposHTML) +
-        sectionHTML("Reporte - Goleadores", golesHTML);
+  const dominio = extraerDominioDesdeTokens(ULTIMOS_TOKENS);
+  const estadisticas = calcularEstadisticasPorEquipo(dominio.equipos, dominio.partidos);
 
-    const fullHTML = buildReportHTMLDoc({
-        generalInner: generalHTML,
-        equiposInner: equiposHTML,
-        goleadoresInner: golesHTML
-    });
-    downloadHTML("reporte_torneo.html", fullHTML);
+  const htmlGeneral = `
+    <ul>
+      <li><strong>Total de equipos:</strong> ${dominio.equipos.length}</li>
+      <li><strong>Total de partidos:</strong> ${dominio.partidos.length}</li>
+      <li><strong>Partidos con resultado:</strong> ${dominio.partidos.filter(p => Number.isInteger(p.gl) && Number.isInteger(p.gv)).length}</li>
+      <li><strong>Goleadores distintos:</strong> ${dominio.goleadores.length}</li>
+    </ul>
+  `;
+
+  const htmlEquipos = renderizarTablaEstadisticasEquipos(estadisticas);
+  const htmlGoleadores = renderizarTablaGoleadores(dominio.goleadores);
+
+  $("#resultsContent").innerHTML =
+    crearSeccionHTML("Reporte - Información General", htmlGeneral) +
+    crearSeccionHTML("Reporte - Estadísticas por Equipo", htmlEquipos) +
+    crearSeccionHTML("Reporte - Goleadores", htmlGoleadores);
+
+  const documentoHTML = construirDocumentoReporteHTML({
+    htmlGeneral,
+    htmlEquipos,
+    htmlGoleadores,
+  });
+  descargarArchivoHTML("reporte_torneo.html", documentoHTML);
 }
 
-// Botón: Mostrar Bracket (DOT a SVG con Viz.js) estilo imagen
+/** Muestra el bracket estilo imagen (SVG con Viz.js) y el DOT correspondiente */
 async function mostrarBracket() {
-    if (!LAST_TOKENS.length) {
-        const { tokens } = scanAll();
-        if (!tokens.length) {
-            document.getElementById('resultsContent').innerHTML = "<p>No hay tokens para mostrar el bracket. Carga o escribe contenido y presiona Analizar Torneo.</p>";
-            return;
-        }
-    }
+  if (ULTIMOS_TOKENS.length === 0) escanearTodo();
 
-    const rounds = analyzeRoundsFromTokens(LAST_TOKENS);
-    if (!rounds.length) {
-        document.getElementById('resultsContent').innerHTML = "<p>No se detectaron rondas (p. ej.: cuartos, semifinal, final). Verifica el bloque ELIMINACION.</p>";
-        return;
-    }
+  if (ULTIMOS_TOKENS.length === 0) {
+    $("#resultsContent").innerHTML = "<p>No hay tokens para mostrar el bracket. Escribe o carga un archivo y presiona Analizar Torneo.</p>";
+    return;
+  }
 
-    const title = getTournamentTitleFromTokens(LAST_TOKENS);
-    const dot = buildStyledBracketDOT(rounds, title);
+  const rondas = extraerRondasDesdeTokens(ULTIMOS_TOKENS);
+  if (rondas.length === 0) {
+    $("#resultsContent").innerHTML = "<p>No se detectaron rondas (p.ej.: cuartos, semifinal, final). Verifica el bloque ELIMINACION.</p>";
+    return;
+  }
 
-    const containerHTML =
-        sectionHTML("Bracket (SVG)", `<div id="bracket-svg" style="overflow:auto;"></div>`) +
-        sectionHTML("DOT de Graphviz", `<pre>${escapeHTML(dot)}</pre>`);
+  const titulo = obtenerTituloTorneoDesdeTokens(ULTIMOS_TOKENS);
+  const dot = construirDOTBracketEstilizado(rondas, titulo);
 
-    const resultsEl = document.getElementById('resultsContent');
-    resultsEl.innerHTML = containerHTML;
+  const htmlContenedor =
+    crearSeccionHTML("Bracket (SVG)", `<div id="bracket-svg" style="overflow:auto;"></div>`) +
+    crearSeccionHTML("DOT de Graphviz", `<pre>${escaparHTML(dot)}</pre>`);
 
-    const target = document.getElementById("bracket-svg");
+  $("#resultsContent").innerHTML = htmlContenedor;
 
-    try {
-        const viz = new Viz();
-        const svgEl = await viz.renderSVGElement(dot);
-        target.innerHTML = "";
-        target.appendChild(svgEl);
-    } catch (err) {
-        console.error("Viz.js error:", err);
-        target.innerHTML = `<p style="color:#b00;">Error renderizando SVG con Viz.js: ${escapeHTML(String(err))}</p>`;
-    }
+  const contenedorSVG = $("#bracket-svg");
+  try {
+    const viz = new Viz();
+    const elementoSVG = await viz.renderSVGElement(dot);
+    contenedorSVG.innerHTML = "";
+    contenedorSVG.appendChild(elementoSVG);
+  } catch (error) {
+    console.error("Viz.js error:", error);
+    contenedorSVG.innerHTML = `<p style="color:#b00;">Error renderizando SVG con Viz.js: ${escaparHTML(String(error))}</p>`;
+  }
 }

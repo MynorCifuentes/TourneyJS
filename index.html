@@ -1,21 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TourneyJS - Analizador de Torneos</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css">
-    <link rel="stylesheet" href="./Interfaz/styles.css">
-    <!-- Nuevo: estilos para tablas con look & feel de CodeMirror -->
-    <link rel="stylesheet" href="./Interfaz/codemirror-tables.css">
+
+    <!-- Codemirrir -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/material.min.css" />
+
+    <!-- Estilo para tabla y general -->
+    <link rel="stylesheet" href="./Interfaz/styles.css" />
+    <link rel="stylesheet" href="./Interfaz/tables.css" />
 </head>
 <body>
-    <input type="file" id="fileInput" class="file-input" accept=".txt" onchange="cargarArchivo(event)">
+    <!-- Entrada-->
+    <input
+        type="file"
+        id="fileInput"
+        class="file-input"
+        accept=".txt,.json"
+        onchange="cargarArchivoDesdeDispositivo(event)"
+    />
+
     <div class="container">
         <header class="header">
-            <h1>TourneyJS - Analizador de Torneos</h1>
+            <h1>TourneyJS - Analizador Léxico para Gestión de Torneos Deportivos</h1>
         </header>
 
         <nav class="nav-buttons">
@@ -29,18 +40,14 @@
             <div class="content-section">
                 <div class="editor-container">
                     <div class="editor-panel">
-                        <div class="editor-header">
-                            Editor de Código - Configuración del Torneo
-                        </div>
+                        <div class="editor-header">Editor de Código - Configuración del Torneo</div>
                         <div class="editor-wrapper">
                             <textarea id="codeEditor"></textarea>
                         </div>
                     </div>
 
                     <div class="results-panel">
-                        <div class="results-header">
-                            Resultados del Análisis
-                        </div>
+                        <div class="results-header">Resultados del Análisis</div>
                         <div class="results-content" id="resultsContent">
                             <div class="empty-state">
                                 <div class="empty-icon">📊</div>
@@ -60,10 +67,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/lint/lint.min.js"></script>
 
-    <!-- Viz.js para renderizar DOT a SVG -->
+    <!-- viz para ver la iamgen de graphviz -->
     <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/viz.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/viz.js@2.1.2/full.render.js"></script>
 
+    <!-- analisis  -->
     <script src="./Lenguaje/Scanner.js"></script>
     <script src="./Lenguaje/index.js"></script>
 </body>

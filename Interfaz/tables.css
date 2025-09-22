@@ -1,8 +1,8 @@
-/* Estiliza secciones y tablas para que combinen con el tema CodeMirror "material" */
+/* Para que sea igual que el codemirror */
 
 :root {
-  --cm-bg: #263238;            /* fondo material */
-  --cm-panel-bg: #1e272e;      /* panel/targeta */
+  --cm-bg: #263238;
+  --cm-panel-bg: #1e272e;
   --cm-text: #eceff1;
   --cm-muted: #b0bec5;
   --cm-border: #37474f;
@@ -102,7 +102,7 @@
   letter-spacing: .3px;
 }
 
-/* Badges y chips */
+
 .cm-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -113,7 +113,7 @@
   border: 1px solid var(--cm-border);
 }
 
-/* Contenedores del SVG */
+/* Esto es para lo del graphviz*/
 #bracket-svg {
   background: var(--cm-panel-bg);
   border: 1px solid var(--cm-border);

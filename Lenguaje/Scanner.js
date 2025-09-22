@@ -1,174 +1,191 @@
+// Analizador léxico (Scanner) con nombres de variables en español.
+// Mantiene el método next_token para compatibilidad y ofrece obtenerSiguienteToken() en español.
+
 class Scanner {
-    constructor(input) {
-        this.input = input.replace(/\r\n/g, '\n') + '\0';
-        this.pos_char = 0;
-        this.buffer = '';
-        this.char_line = 1;
-        this.char_col = 1;
-        this.next_char = '';
-        this.errors = []; // Almacena errores léxicos
-        this.keywords = {
-            TORNEO: 'KW_torneo',
-            EQUIPOS: 'KW_equipos',
-            equipo: 'KW_equipo',
-            PORTERO: 'KW_portero',
-        }
+    constructor(entradaTexto) {
+        //saltos de línea y gestion de columna
+        this.textoEntrada = entradaTexto.replace(/\r\n/g, "\n") + "\0";
+
+        // Punteros y estado de lectura
+        this.indiceCaracter = 0;
+        this.acumuladorLexema = "";
+        this.numeroLinea = 1;
+        this.numeroColumna = 1;
+
+        // Caracter de trabajo
+        this.caracterActual = "";
+
+        // Acumulador de errores léxicos
+        this.listaErroresLexicos = [];
+
+        // Palabras reservadas (puedes ampliar aquí)
+        this.palabrasReservadas = {
+            TORNEO: "KW_torneo",
+            EQUIPOS: "KW_equipos",
+            equipo: "KW_equipo",
+            PORTERO: "KW_portero",
+        };
     }
 
-    initBuffer(current_char) {
-        this.buffer = current_char;
-        this.char_col ++;
-        this.pos_char ++;
-        this.last_char = current_char;
+    // Utilidades internas para construir lexemas
+    iniciarAcumulador(car) {
+        this.acumuladorLexema = car;
+        this.numeroColumna++;
+        this.indiceCaracter++;
+        this.ultimoCaracter = car;
     }
 
-    addBuffer(current_char) {
-        this.buffer += current_char;
-        this.char_col ++;
-        this.pos_char ++;
-        this.last_char = current_char;
+    agregarAlAcumulador(car) {
+        this.acumuladorLexema += car;
+        this.numeroColumna++;
+        this.indiceCaracter++;
+        this.ultimoCaracter = car;
     }
 
-    S0() {
-        while((this.next_char = this.input[this.pos_char]) !== '\0') {
-            this.next_char = this.input[this.pos_char];
+    // Estado principal: consume espacios, decide transiciones y reporta tokens
+    estadoInicial() {
+        while ((this.caracterActual = this.textoEntrada[this.indiceCaracter]) !== "\0") {
+            const ch = this.caracterActual;
+            const code = ch.charCodeAt(0);
 
-            // Letras A-Z o a-z -> identificadores / keywords
-            if (
-                (this.next_char.charCodeAt(0) >= 65 && this.next_char.charCodeAt(0) <= 90) ||
-                (this.next_char.charCodeAt(0) >= 97 && this.next_char.charCodeAt(0) <= 122)
-            ) {
-                this.initBuffer(this.next_char);
-                return this.S1();
+            // Letras -> identificadores o palabras reservadas
+            if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {  
+                this.iniciarAcumulador(ch);
+                return this.estadoIdentificador();
             }
 
-            // Números 0-9 -> TK_number
-            if (this.next_char.charCodeAt(0) >= 48 && this.next_char.charCodeAt(0) <= 57) {
-                this.initBuffer(this.next_char);
-                return this.S10();
+            // Dígitos -> número
+            if (code >= 48 && code <= 57) {
+                this.iniciarAcumulador(ch);
+                return this.estadoNumero();
             }
 
             // Cadenas entre comillas
-            if (this.next_char === '"') {
-                this.initBuffer(this.next_char);
-                return this.S2();
+            if (ch === '"') {
+                this.iniciarAcumulador(ch);
+                return this.estadoCadenaAbierta();
             }
 
-            if (this.next_char === '{') {
-                this.initBuffer(this.next_char);
-                return this.S4();
+            // Símbolos simples
+            if (ch === "{") { 
+                this.iniciarAcumulador(ch); 
+                return this.tokenLLaveIzquierda();
             }
-
-            if (this.next_char === '}') {
-                this.initBuffer(this.next_char);
-                return this.S5();
+            if (ch === "}") 
+                { this.iniciarAcumulador(ch); 
+                    return this.tokenLLaveDerecha(); 
+                }
+            if (ch === "[") { 
+                this.iniciarAcumulador(ch); 
+                return this.tokenCorcheteIzquierdo(); 
             }
-
-            if (this.next_char === '[') {
-                this.initBuffer(this.next_char);
-                return this.S6();
+            if (ch === "]") { 
+                this.iniciarAcumulador(ch); 
+                return this.tokenCorcheteDerecho(); 
             }
-
-            if (this.next_char === ']') {
-                this.initBuffer(this.next_char);
-                return this.S7();
+            if (ch === ",") { 
+                this.iniciarAcumulador(ch); 
+                return this.tokenComa(); 
             }
-
-            if (this.next_char === ',') {
-                this.initBuffer(this.next_char);
-                return this.S8();
+            if (ch === ":") { 
+                this.iniciarAcumulador(ch); 
+                return this.tokenDosPuntos(); 
             }
-
-            if (this.next_char === ':') {
-                this.initBuffer(this.next_char);
-                return this.S9();
-            }
-
-            // Caracteres ignorados
-            if (this.next_char === ' ') {
-                this.char_col ++;
-            }
-            else if (this.next_char === '\t') {
-                this.char_col += 4;
-            }
-            else if (this.next_char === '\n') {
-                this.char_col = 1;
-                this.char_line ++;
-            }
-            // Error léxico
-            else {
-                this.char_col ++;
-                this.errors.push({
-                    message: `Símbolo no reconocido '${this.next_char}'`,
-                    line: this.char_line,
-                    column: this.char_col
+//---------------------------------------------------------------------------------------------------------------------
+            // Espacios en blanco
+            if (ch === " ") {
+                this.numeroColumna++;
+            } else if (ch === "\t") {
+                this.numeroColumna += 4;
+            } else if (ch === "\n") {
+                this.numeroColumna = 1;
+                this.numeroLinea++;
+            } else {
+                // Error léxico: símbolo desconocido
+                this.numeroColumna++;
+                this.listaErroresLexicos.push({
+                    mensaje: `Símbolo no reconocido '${ch}'`,
+                    linea: this.numeroLinea,
+                    columna: this.numeroColumna,
                 });
             }
 
-            this.pos_char ++;
-        }
-        return { type: `EOF`, line: this.char_line, column: this.char_col }; // End Of File
-    }
-
-    S1() {
-        this.next_char = this.input[this.pos_char];
-        if (
-            (this.next_char.charCodeAt(0) >= 65 && this.next_char.charCodeAt(0) <= 90) ||
-            (this.next_char.charCodeAt(0) >= 97 && this.next_char.charCodeAt(0) <= 122)
-        ) {
-            this.addBuffer(this.next_char);
-            return this.S1();
+            this.indiceCaracter++;
         }
 
-        // Palabra reservada o identificador
-        return {
-            lexeme: this.buffer,
-            type: this.keywords[this.buffer] || 'TK_id',
-            line: this.char_line,
-            column: this.char_col
-        };
+        return { type: "EOF", line: this.numeroLinea, column: this.numeroColumna };
     }
 
-    S2() {
-        this.next_char = this.input[this.pos_char];
-        if (this.next_char !== '"') {
-            this.addBuffer(this.next_char);
-            return this.S2();
+    // Identificadores o palabras reservadas
+    estadoIdentificador() {
+        this.caracterActual = this.textoEntrada[this.indiceCaracter];
+        const code = this.caracterActual?.charCodeAt(0) ?? -1;  // 
+
+        if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+            this.agregarAlAcumulador(this.caracterActual);
+            return this.estadoIdentificador();
         }
-        this.addBuffer(this.next_char);
-        return this.S3();
+
+        const lexema = this.acumuladorLexema;
+        const tipo = this.palabrasReservadas[lexema] || "TK_id";
+        return { lexeme: lexema, type: tipo, line: this.numeroLinea, column: this.numeroColumna };
     }
 
-    S3() {
-        const inner = this.buffer.substring(1, this.buffer.length - 1);
-        return {
-            lexeme: inner,
-            type: this.keywords[inner] || 'TK_string',
-            line: this.char_line,
-            column: this.char_col
-        };
-    }
+    // Números enteros
+    estadoNumero() {
+        this.caracterActual = this.textoEntrada[this.indiceCaracter];
+        const code = this.caracterActual?.charCodeAt(0) ?? -1;
 
-    S4() { return { lexeme: this.buffer, type: 'TK_lbrc', line: this.char_line, column: this.char_col }; }
-    S5() { return { lexeme: this.buffer, type: 'TK_rbrc', line: this.char_line, column: this.char_col }; }
-    S6() { return { lexeme: this.buffer, type: 'TK_lbrk', line: this.char_line, column: this.char_col }; }
-    S7() { return { lexeme: this.buffer, type: 'TK_rbrk', line: this.char_line, column: this.char_col }; }
-    S8() { return { lexeme: this.buffer, type: 'TK_comma', line: this.char_line, column: this.char_col }; }
-    S9() { return { lexeme: this.buffer, type: 'TK_colon', line: this.char_line, column: this.char_col }; }
-
-    // Números
-    S10() {
-        this.next_char = this.input[this.pos_char];
-        if (this.next_char.charCodeAt(0) >= 48 && this.next_char.charCodeAt(0) <= 57) {
-            this.addBuffer(this.next_char);
-            return this.S10();
+        if (code >= 48 && code <= 57) {
+            this.agregarAlAcumulador(this.caracterActual);
+            return this.estadoNumero();
         }
-        return { lexeme: this.buffer, type: 'TK_number', line: this.char_line, column: this.char_col };
+
+        return { lexeme: this.acumuladorLexema, type: "TK_number", line: this.numeroLinea, column: this.numeroColumna };
     }
 
-    next_token = () => this.S0();
+    // Cadenas "..."
+    estadoCadenaAbierta() {
+        this.caracterActual = this.textoEntrada[this.indiceCaracter];
 
+        if (this.caracterActual !== '"') {
+            this.agregarAlAcumulador(this.caracterActual);
+            return this.estadoCadenaAbierta();
+        }
+
+        // Cerrar comillas
+        this.agregarAlAcumulador(this.caracterActual);
+        return this.estadoCadenaCerrada();
+    }
+
+    estadoCadenaCerrada() {
+        const contenido = this.acumuladorLexema.substring(1, this.acumuladorLexema.length - 1);
+        const tipo = this.palabrasReservadas[contenido] || "TK_string";
+        return { lexeme: contenido, type: tipo, line: this.numeroLinea, column: this.numeroColumna };
+    }
+
+    // Tokens de un solo carácter
+    tokenLLaveIzquierda() { return { lexeme: this.acumuladorLexema, type: "TK_lbrc", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenLLaveDerecha()   { return { lexeme: this.acumuladorLexema, type: "TK_rbrc", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenCorcheteIzquierdo(){ return { lexeme: this.acumuladorLexema, type: "TK_lbrk", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenCorcheteDerecho(){ return { lexeme: this.acumuladorLexema, type: "TK_rbrk", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenComa()           { return { lexeme: this.acumuladorLexema, type: "TK_comma", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenDosPuntos()      { return { lexeme: this.acumuladorLexema, type: "TK_colon", line: this.numeroLinea, column: this.numeroColumna }; }
+
+    // API pública: obtener siguiente token (en español) y alias en inglés para compatibilidad
+    obtenerSiguienteToken() {
+        return this.estadoInicial();
+    }
+    next_token() {
+        return this.obtenerSiguienteToken();
+    }
+
+    // Errores léxicos
+    obtenerErroresLexicos() {
+        // Devolvemos una copia para no mutar el original externamente
+        return this.listaErroresLexicos.slice();
+    }
     getErrors() {
-        return this.errors.slice();
+        return this.obtenerErroresLexicos();
     }
 }
