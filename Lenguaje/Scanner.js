@@ -3,7 +3,7 @@
 
 class Scanner {
     constructor(entradaTexto) {
-        //saltos de línea y gestion de columna
+        // saltos de línea y gestión de columna
         this.textoEntrada = entradaTexto.replace(/\r\n/g, "\n") + "\0";
 
         // Punteros y estado de lectura
@@ -18,23 +18,23 @@ class Scanner {
         // para los errores
         this.listaErroresLexicos = [];
 
-        // Palabras reservadas 
+        // Palabras reservadas (usar llaves en minúsculas para hacer el match case-insensitive)
         this.palabrasReservadas = {
-            TORNEO: "KW_torneo",
-            EQUIPOS: "KW_equipos",
+            torneo: "KW_torneo",
+            equipos: "KW_equipos",
             equipo: "KW_equipo",
             jugador: "KW_jugador",
-            ELIMINACION: "KW_eliminacion",
+            eliminacion: "KW_eliminacion",
             fase: "KW_fase",
-            partido: "KW_partido", 
+            partido: "KW_partido",
             goleador: "KW_goleador",
-            Posiciones: "KW_posiciones"
-
-
+            posiciones: "KW_posiciones",
+            // agrega aquí otras nuevas, siempre en minúsculas
+            portero: "KW_portero"
         };
     }
 
-    // para los lexemas
+    // utilidades para los lexemas
     iniciarAcumulador(car) {
         this.acumuladorLexema = car;
         this.numeroColumna++;
@@ -55,8 +55,8 @@ class Scanner {
             const ch = this.caracterActual;
             const code = ch.charCodeAt(0);
 
-            // Letras -> identificadores o palabras reservadas
-            if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {  
+            // Letras -> identificadores o palabras reservadas (ASCII A-Z, a-z)
+            if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
                 this.iniciarAcumulador(ch);
                 return this.estadoIdentificador();
             }
@@ -74,31 +74,13 @@ class Scanner {
             }
 
             // Símbolos simples
-            if (ch === "{") { 
-                this.iniciarAcumulador(ch); 
-                return this.tokenLLaveIzquierda();
-            }
-            if (ch === "}") 
-                { this.iniciarAcumulador(ch); 
-                    return this.tokenLLaveDerecha(); 
-                }
-            if (ch === "[") { 
-                this.iniciarAcumulador(ch); 
-                return this.tokenCorcheteIzquierdo(); 
-            }
-            if (ch === "]") { 
-                this.iniciarAcumulador(ch); 
-                return this.tokenCorcheteDerecho(); 
-            }
-            if (ch === ",") { 
-                this.iniciarAcumulador(ch); 
-                return this.tokenComa(); 
-            }
-            if (ch === ":") { 
-                this.iniciarAcumulador(ch); 
-                return this.tokenDosPuntos(); 
-            }
-//---------------------------------------------------------------------------------------------------------------------
+            if (ch === "{") { this.iniciarAcumulador(ch); return this.tokenLLaveIzquierda(); }
+            if (ch === "}") { this.iniciarAcumulador(ch); return this.tokenLLaveDerecha(); }
+            if (ch === "[") { this.iniciarAcumulador(ch); return this.tokenCorcheteIzquierdo(); }
+            if (ch === "]") { this.iniciarAcumulador(ch); return this.tokenCorcheteDerecho(); }
+            if (ch === ",") { this.iniciarAcumulador(ch); return this.tokenComa(); }
+            if (ch === ":") { this.iniciarAcumulador(ch); return this.tokenDosPuntos(); }
+
             // Espacios en blanco
             if (ch === " ") {
                 this.numeroColumna++;
@@ -126,15 +108,17 @@ class Scanner {
     // Identificadores o palabras reservadas
     estadoIdentificador() {
         this.caracterActual = this.textoEntrada[this.indiceCaracter];
-        const code = this.caracterActual?.charCodeAt(0) ?? -1;  // 
+        const code = this.caracterActual?.charCodeAt(0) ?? -1;
 
+        // Solo sigue mientras sean letras ASCII (A-Z, a-z). Si quieres permitir dígitos/_ después, amplía aquí.
         if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
             this.agregarAlAcumulador(this.caracterActual);
             return this.estadoIdentificador();
         }
 
         const lexema = this.acumuladorLexema;
-        const tipo = this.palabrasReservadas[lexema] || "TK_id";
+        const llave = this.palabrasReservadas[lexema] ? lexema : lexema.toLowerCase();
+        const tipo = this.palabrasReservadas[llave] || "TK_id";
         return { lexeme: lexema, type: tipo, line: this.numeroLinea, column: this.numeroColumna };
     }
 
@@ -167,61 +151,20 @@ class Scanner {
 
     estadoCadenaCerrada() {
         const contenido = this.acumuladorLexema.substring(1, this.acumuladorLexema.length - 1);
-        const tipo = this.palabrasReservadas[contenido] || "TK_string";
+        const llave = this.palabrasReservadas[contenido] ? contenido : contenido.toLowerCase();
+        const tipo = this.palabrasReservadas[llave] || "TK_string";
         return { lexeme: contenido, type: tipo, line: this.numeroLinea, column: this.numeroColumna };
     }
 
     // Tokens de un solo carácter
-    tokenLLaveIzquierda() { 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_lbrc", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
-    tokenLLaveDerecha() { 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_rbrc", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
-    tokenCorcheteIzquierdo(){ 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_lbrk", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
-    tokenCorcheteDerecho(){ 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_rbrk", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
-    tokenComa() { 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_comma", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
-    tokenDosPuntos() { 
-        return { 
-            lexeme: this.acumuladorLexema, 
-            type: "TK_colon", 
-            line: this.numeroLinea, 
-            column: this.numeroColumna 
-        }; 
-    }
+    tokenLLaveIzquierda() { return { lexeme: this.acumuladorLexema, type: "TK_lbrc", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenLLaveDerecha()   { return { lexeme: this.acumuladorLexema, type: "TK_rbrc", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenCorcheteIzquierdo(){ return { lexeme: this.acumuladorLexema, type: "TK_lbrk", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenCorcheteDerecho(){ return { lexeme: this.acumuladorLexema, type: "TK_rbrk", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenComa()           { return { lexeme: this.acumuladorLexema, type: "TK_comma", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenDosPuntos()      { return { lexeme: this.acumuladorLexema, type: "TK_colon", line: this.numeroLinea, column: this.numeroColumna }; }
 
-    // API pública: obtener siguiente token (en español) y alias en inglés para compatibilidad
+    // "API" pública del objeto: obtener siguiente token
     obtenerSiguienteToken() {
         return this.estadoInicial();
     }

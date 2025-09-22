@@ -1,26 +1,26 @@
 /* Para que sea igual que el codemirror */
 
 :root {
-  --cm-bg: #263238;
-  --cm-panel-bg: #1e272e;
-  --cm-text: #eceff1;
-  --cm-muted: #b0bec5;
-  --cm-border: #37474f;
-  --cm-accent: #82b1ff;
-  --cm-accent-weak: #546e7a;
-  --cm-row-alt: #2a343a;
+  --cm-bg: #2b1216;           /* fondo base oscuro corinto */
+  --cm-panel-bg: #1e0d10;     /* panel oscuro */
+  --cm-text: #f5edee;         /* texto claro */
+  --cm-muted: #d4b8bd;        /* texto tenue */
+  --cm-border: #3a1a1f;       /* bordes en corinto oscuro */
+  --cm-accent: #a53a3a;       /* acento corinto */
+  --cm-accent-weak: #3a1e22;  /* acento débil para cabeceras en dark */
+  --cm-row-alt: #241014;      /* filas alternas */
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --cm-bg: #fafafa;
-    --cm-panel-bg: #ffffff;
-    --cm-text: #222;
-    --cm-muted: #666;
-    --cm-border: #ddd;
-    --cm-accent: #2962ff;
-    --cm-accent-weak: #e3f2fd;
-    --cm-row-alt: #f7f7f7;
+    --cm-bg: #faf3f4;            /* fondo claro rosado */
+    --cm-panel-bg: #ffffff;      /* panel claro */
+    --cm-text: #2b1216;          /* texto oscuro corinto */
+    --cm-muted: #7a5157;         /* texto tenue */
+    --cm-border: #e8d6d9;        /* borde claro */
+    --cm-accent: #8e1b1b;        /* acento corinto intenso */
+    --cm-accent-weak: #f8e6e8;   /* acento débil */
+    --cm-row-alt: #fdf6f7;       /* filas alternas */
   }
 }
 
@@ -33,7 +33,11 @@
 }
 
 .results-header {
-  background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(130,177,255,0.06) 100%);
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(165, 58, 58, 0.06) 100%
+  );
   border-bottom: 1px solid var(--cm-border);
   color: var(--cm-text);
 }
@@ -93,7 +97,7 @@
 }
 
 .cm-table.cm-hover tbody tr:hover {
-  background: rgba(130,177,255,0.08);
+  background: rgba(165, 58, 58, 0.08); /* hover corinto */
 }
 
 .cm-table .num {
@@ -101,7 +105,6 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   letter-spacing: .3px;
 }
-
 
 .cm-badge {
   display: inline-block;
