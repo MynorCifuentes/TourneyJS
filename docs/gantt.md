@@ -12,7 +12,7 @@ gantt
     section Implementación del Analizador Léxico
     Graphviz :active, 7, 2025-09-18, 2025-09-19
     Interfaz Web :done, 6, 2025-09-18, 2025-09-19
-    Implementación Analizador Léxico :active, 5, 2025-09-18, 2025-09-19
+    Implementación Analizador Léxico :done, 5, 2025-09-18, 2025-09-19
     section Generación de Salidas
     Reportes :active, 8, 2025-09-18, 2025-09-20
     section Pruebas, Corrección y Documentación
