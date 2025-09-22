@@ -10,11 +10,11 @@ gantt
     Diagrama de Flujo :active, 4, 2025-09-18, 2025-09-18
     Diseño Autómata :done, 3, 2025-09-18, 2025-09-18
     section Implementación del Analizador Léxico
-    Graphviz :active, 7, 2025-09-18, 2025-09-19
+    Graphviz :done, 7, 2025-09-18, 2025-09-19
     Interfaz Web :done, 6, 2025-09-18, 2025-09-19
     Implementación Analizador Léxico :done, 5, 2025-09-18, 2025-09-19
     section Generación de Salidas
-    Reportes :active, 8, 2025-09-18, 2025-09-20
+    Reportes :done, 8, 2025-09-18, 2025-09-20
     section Pruebas, Corrección y Documentación
     Documentación :active, 9, 2025-09-18, 2025-09-21
 ```
