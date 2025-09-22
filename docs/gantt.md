@@ -7,7 +7,7 @@ gantt
     Análisis :done, 2, 2025-09-18, 2025-09-18
     Lectura Archivo :done, 1, 2025-09-18, 2025-09-18
     section Diseño del AFD y Diagrama del Sistema
-    Diagrama de Flujo :active, 4, 2025-09-18, 2025-09-18
+    Diagrama de Flujo :done, 4, 2025-09-18, 2025-09-18
     Diseño Autómata :done, 3, 2025-09-18, 2025-09-18
     section Implementación del Analizador Léxico
     Graphviz :done, 7, 2025-09-18, 2025-09-19
@@ -16,5 +16,5 @@ gantt
     section Generación de Salidas
     Reportes :done, 8, 2025-09-18, 2025-09-20
     section Pruebas, Corrección y Documentación
-    Documentación :active, 9, 2025-09-18, 2025-09-21
+    Documentación :done, 9, 2025-09-18, 2025-09-21
 ```
