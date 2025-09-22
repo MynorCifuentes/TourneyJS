@@ -12,22 +12,29 @@ class Scanner {
         this.numeroLinea = 1;
         this.numeroColumna = 1;
 
-        // Caracter de trabajo
+        // Caracter para recorrer
         this.caracterActual = "";
 
-        // Acumulador de errores léxicos
+        // para los errores
         this.listaErroresLexicos = [];
 
-        // Palabras reservadas (puedes ampliar aquí)
+        // Palabras reservadas 
         this.palabrasReservadas = {
             TORNEO: "KW_torneo",
             EQUIPOS: "KW_equipos",
             equipo: "KW_equipo",
-            PORTERO: "KW_portero",
+            jugador: "KW_jugador",
+            ELIMINACION: "KW_eliminacion",
+            fase: "KW_fase",
+            partido: "KW_partido", 
+            goleador: "KW_goleador",
+            Posiciones: "KW_posiciones"
+
+
         };
     }
 
-    // Utilidades internas para construir lexemas
+    // para los lexemas
     iniciarAcumulador(car) {
         this.acumuladorLexema = car;
         this.numeroColumna++;
@@ -165,12 +172,54 @@ class Scanner {
     }
 
     // Tokens de un solo carácter
-    tokenLLaveIzquierda() { return { lexeme: this.acumuladorLexema, type: "TK_lbrc", line: this.numeroLinea, column: this.numeroColumna }; }
-    tokenLLaveDerecha()   { return { lexeme: this.acumuladorLexema, type: "TK_rbrc", line: this.numeroLinea, column: this.numeroColumna }; }
-    tokenCorcheteIzquierdo(){ return { lexeme: this.acumuladorLexema, type: "TK_lbrk", line: this.numeroLinea, column: this.numeroColumna }; }
-    tokenCorcheteDerecho(){ return { lexeme: this.acumuladorLexema, type: "TK_rbrk", line: this.numeroLinea, column: this.numeroColumna }; }
-    tokenComa()           { return { lexeme: this.acumuladorLexema, type: "TK_comma", line: this.numeroLinea, column: this.numeroColumna }; }
-    tokenDosPuntos()      { return { lexeme: this.acumuladorLexema, type: "TK_colon", line: this.numeroLinea, column: this.numeroColumna }; }
+    tokenLLaveIzquierda() { 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_lbrc", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
+    tokenLLaveDerecha() { 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_rbrc", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
+    tokenCorcheteIzquierdo(){ 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_lbrk", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
+    tokenCorcheteDerecho(){ 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_rbrk", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
+    tokenComa() { 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_comma", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
+    tokenDosPuntos() { 
+        return { 
+            lexeme: this.acumuladorLexema, 
+            type: "TK_colon", 
+            line: this.numeroLinea, 
+            column: this.numeroColumna 
+        }; 
+    }
 
     // API pública: obtener siguiente token (en español) y alias en inglés para compatibilidad
     obtenerSiguienteToken() {
