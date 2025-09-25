@@ -1,4 +1,4 @@
-# LFP_Proyecto1_201318644
+# TourneyJS
 
 TourneyJS: Analizador Léxico para Gestión de Torneos Deportivos
 
