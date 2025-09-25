@@ -29,7 +29,6 @@ class Scanner {
             partido: "KW_partido",
             goleador: "KW_goleador",
             posiciones: "KW_posiciones",
-            // agrega aquí otras nuevas, siempre en minúsculas
             portero: "KW_portero"
         };
     }
@@ -110,7 +109,7 @@ class Scanner {
         this.caracterActual = this.textoEntrada[this.indiceCaracter];
         const code = this.caracterActual?.charCodeAt(0) ?? -1;
 
-        // Solo sigue mientras sean letras ASCII (A-Z, a-z). Si quieres permitir dígitos/_ después, amplía aquí.
+        // Solo sigue mientras sean letras ASCII (A-Z, a-z).
         if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
             this.agregarAlAcumulador(this.caracterActual);
             return this.estadoIdentificador();
